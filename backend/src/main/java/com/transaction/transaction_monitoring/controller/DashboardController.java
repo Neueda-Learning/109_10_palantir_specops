@@ -22,5 +22,6 @@ public class DashboardController {
     @GetMapping("/stats")
     @Operation(summary = "Get dashboard summary statistics")
     public DashboardStatsResponse getStats() {
+        return alertService.getStats();
     }
 }
