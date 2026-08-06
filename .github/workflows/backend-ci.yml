@@ -1,0 +1,85 @@
+name: Backend CI
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: n3u3da!
+          MYSQL_DATABASE: transaction_monitoring
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -pn3u3da!"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+
+      - name: Make Maven Wrapper Executable
+        run: chmod +x mvnw
+
+      - name: Build and Run Tests
+        env:
+          SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3306/transaction_monitoring?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+          SPRING_DATASOURCE_USERNAME: root
+          SPRING_DATASOURCE_PASSWORD: n3u3da!
+        run: ./mvnw clean verify
+
+      - name: Login to GHCR
+        if: github.event_name == 'push'
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io \
+            -u ${{ github.actor }} \
+            --password-stdin
+
+      - name: Build Docker Image
+        if: github.event_name == 'push'
+        run: |
+          docker build \
+            -t ghcr.io/neueda-learning/specops-api:latest .
+
+      - name: Push Docker Image
+        if: github.event_name == 'push'
+        run: |
+          docker push ghcr.io/neueda-learning/specops-api:latest
+
+      - name: Trigger Jenkins CD
+        if: github.event_name == 'push'
+        run: |
+          curl -X POST \
+            "${{ secrets.JENKINS_URL }}/buildByToken/build?job=specops-api-deploy-job&token=${{ secrets.JENKINS_TOKEN }}"
