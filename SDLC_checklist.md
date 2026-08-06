@@ -25,6 +25,7 @@
 | Alert lifecycle + de-duplication + audit trail | ✅ Built |
 | Transactions / Alerts / AlertDetail / Rules / Dashboard UI | ✅ Built |
 | Swagger UI + sample data generator | ✅ Built |
+| CI/CD pipeline (GH Actions → Docker/GHCR → Jenkins CD) | ✅ Built |
 | **Flagged Organisation Monitoring** | ⏳ **In scope — next iteration** |
 
 ---
@@ -226,10 +227,12 @@
 
 ## 10) CI/CD & Quality Gates
 
-- [x] Backend build via Maven wrapper (`mvnw.cmd test`) `[Avinash — Day 1]`
-- [x] Frontend lint via oxlint (`npm run lint`) `[Deepak — Day 1]`
-- [ ] Frontend production build (`npm run build`) wired into the check pipeline `[Deepak]`
-- [ ] Unit + integration tests run in CI pipeline `[Avinash]`
+- [x] Backend build via Maven wrapper (`mvnw clean verify` in `.github/workflows/backend-ci.yml`) `[Avinash — Day 1]`
+- [ ] Frontend lint via oxlint (`npm run lint`) — script exists locally, **not wired into CI yet** `[Deepak — Day 1]`
+- [x] Frontend production build (`npm run build`) wired into the check pipeline — `.github/workflows/frontend-ci.yml` `[Deepak]`
+- [x] Backend unit/integration tests run in CI pipeline (frontend has no test suite yet) `[Avinash]`
+- [x] Docker images built & pushed to GHCR on push to `main` (`specops-api`, `specops-ui`) `[Avinash + Deepak]`
+- [x] Jenkins CD triggered after push (`specops-api-deploy-job`, `specops-ui-deploy-job`) `[Avinash + Deepak]`
 - [ ] Branch protection: PR requires passing checks before merge `[Avinash]`
 - [ ] Separate dev / demo config (env files, not hardcoded) `[All]`
 
@@ -248,6 +251,7 @@
 
 - [x] README: overview, architecture, quick start, API summary, troubleshooting `[Avinash]`
 - [x] FLOW.md: DB schema, rule-engine internals, all endpoints, end-to-end scenario `[Avinash]`
+- [x] GenerateDataset.md: dummy-data generation guide (backend API + frontend dashboard) `[Avinash]`
 - [x] Feature proposal: `feature-flagged-organisations.md` (scenarios A & B, watchlist design, rule semantics) `[All]`
 - [x] Swagger / OpenAPI at `/swagger-ui.html` `[Avinash]`
 - [ ] Testing summary (what was tested, results) `[Rakesh]`

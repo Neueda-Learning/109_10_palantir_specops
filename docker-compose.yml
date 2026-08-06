@@ -1,0 +1,41 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: specops-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: n3u3da!
+      MYSQL_DATABASE: transaction_monitoring
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-pn3u3da!"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    image: ghcr.io/neueda-learning/specops-api:latest
+    container_name: specops-api
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/transaction_monitoring?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: n3u3da!
+    ports:
+      - "8082:8080"
+
+  ui:
+    image: ghcr.io/neueda-learning/specops-ui:latest
+    container_name: specops-ui
+    depends_on:
+      - api
+    ports:
+      - "8081:80"
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
