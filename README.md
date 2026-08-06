@@ -91,13 +91,14 @@ monitoring-master/
 │   │   │   │   ├── model/            # Plain data classes (Transaction, MonitoringRule, Alert, ...)
 │   │   │   │   ├── dto/              # Request/response objects
 │   │   │   │   ├── enums/            # AlertStatus, RuleType, Severity, TransactionType/Status
-│   │   │   │   └── exception/        # Custom exceptions + global error handler
+│   │   │   │   ├── exception/        # Custom exceptions + global error handler
+│   │   │   │   └── DataSeeder.java   # Standalone JDBC seeder — inserts 1000 demo transactions + alerts
 │   │   │   └── resources/
 │   │   │       ├── schema.sql        # Creates the 5 DB tables
 │   │   │       ├── data.sql          # Seeds 4 default monitoring rules
 │   │   │       └── application.properties  # DB connection + server + Swagger config
 │   │   └── test/                     # Spring context-load test
-│   ├── pom.xml                       # Maven build & dependencies
+│   ├── pom.xml                       # Maven build & dependencies (includes exec-maven-plugin)
 │   └── mvnw.cmd / mvnw               # Maven wrapper
 ├── frontend/                         # React + Vite SPA
 │   ├── src/
@@ -109,6 +110,12 @@ monitoring-master/
 │   │   └── index.css                 # Tailwind entry
 │   ├── vite.config.js                # Dev server + /api proxy → :8080
 │   └── package.json                  # npm scripts & dependencies
+├── database/                         # MySQL dump files for seeding demo data
+│   ├── transaction_monitoring_monitoring_rules.sql
+│   ├── transaction_monitoring_transactions.sql
+│   ├── transaction_monitoring_alerts.sql
+│   ├── transaction_monitoring_alert_transactions.sql
+│   └── transaction_monitoring_alert_status_history.sql
 ├── README.md                         # This file
 ├── FLOW.md                           # Deep-dive: schema, engine, endpoints, end-to-end scenario
 ├── transaction_monitoring.md         # Original training brief / requirements
@@ -279,6 +286,62 @@ Frontend ready at **http://localhost:5173** (Vite proxies `/api/*` to :8080).
 
 ---
 
+## Seed Demo Data
+
+The `database/` folder contains ready-made MySQL dump files with 1000 transactions and all related alerts, rules, and history. Import them once after the app has started for the first time.
+
+### What's included
+
+| File | Table | Contents |
+|---|---|---|
+| `transaction_monitoring_monitoring_rules.sql` | `monitoring_rules` | 4 default active rules |
+| `transaction_monitoring_transactions.sql` | `transactions` | 1000 transactions (90 days, 10 accounts, 80 payees) |
+| `transaction_monitoring_alerts.sql` | `alerts` | All alerts fired by the rule engine |
+| `transaction_monitoring_alert_transactions.sql` | `alert_transactions` | Alert ↔ transaction links |
+| `transaction_monitoring_alert_status_history.sql` | `alert_status_history` | Full status audit trail per alert |
+
+### How to import
+
+**Step 1** — Start the Spring Boot app once so `schema.sql` creates all tables, then stop it:
+```bash
+cd backend
+
+# Windows
+.\mvnw.cmd spring-boot:run
+# (wait for "Started TransactionMonitoringApplication", then Ctrl+C)
+```
+
+**Step 2** — Import the dump files **in order** (FK dependencies matter):
+
+**Option A — MySQL command line:**
+```bash
+mysql -u root -p transaction_monitoring < database/transaction_monitoring_monitoring_rules.sql
+mysql -u root -p transaction_monitoring < database/transaction_monitoring_transactions.sql
+mysql -u root -p transaction_monitoring < database/transaction_monitoring_alerts.sql
+mysql -u root -p transaction_monitoring < database/transaction_monitoring_alert_transactions.sql
+mysql -u root -p transaction_monitoring < database/transaction_monitoring_alert_status_history.sql
+```
+
+**Option B — MySQL Workbench:**
+1. **Server → Data Import**
+2. Select **"Import from Self-Contained File"**
+3. Import each file above in the same order
+4. Click **Start Import** for each
+
+**Step 3** — Start the app again. The dashboard will show populated data immediately.
+
+> **Note:** Import only once per clean database. Running it again will duplicate data. To reset, drop and recreate the database or truncate all tables first.
+
+### Alternative: Generate data programmatically
+
+If you prefer to generate fresh data instead of using the dump files, `DataSeeder.java` is also included:
+```bash
+cd backend
+.\mvnw.cmd compile exec:java
+```
+
+---
+
 ## Sample Usage (API)
 
 ```bash
@@ -390,7 +453,7 @@ alert_transactions (join table)
 |---|---|
 | `backend/src/main/resources/application.properties` | DB URL/username/password, auto schema+data init, server port (8080), Swagger paths |
 | `frontend/vite.config.js` | Dev server port (5173) + `/api` proxy target (:8080) |
-| `backend/pom.xml` | Java version, Spring Boot, MySQL driver, springdoc, validation |
+| `backend/pom.xml` | Java version, Spring Boot, MySQL driver, springdoc, validation, exec-maven-plugin (for DataSeeder) |
 | `frontend/package.json` | React, Vite, Tailwind, Router, Axios, Recharts; scripts: `dev`, `build`, `lint`, `preview` |
 
 ---
@@ -404,6 +467,9 @@ cd backend
 
 # Backend: package (skip tests)
 .\mvnw.cmd clean package -DskipTests
+
+# Seed database with 1000 demo transactions (run after first app start)
+.\mvnw.cmd compile exec:java
 
 # Frontend: lint
 cd frontend
@@ -439,6 +505,7 @@ Current tests: a single Spring context-load test at `backend/src/test/java/.../T
 | `npm install` errors | Old Node/npm | Use Node 18+ |
 | Alerts not created | All rules deactivated | Check Rules page toggles / `active` column |
 | `409` on alert action | Invalid lifecycle transition | Follow OPEN→ACKNOWLEDGED→INVESTIGATING→CLOSED |
+| SQL import FK error | Wrong import order | Import in order: rules → transactions → alerts → alert_transactions → alert_status_history |
 
 ---
 
