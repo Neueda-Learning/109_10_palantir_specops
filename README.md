@@ -110,6 +110,12 @@ monitoring-master/
 │   │   └── index.css                 # Tailwind entry
 │   ├── vite.config.js                # Dev server + /api proxy → :8080
 │   └── package.json                  # npm scripts & dependencies
+├── database/                         # MySQL dump files for seeding demo data
+│   ├── transaction_monitoring_monitoring_rules.sql
+│   ├── transaction_monitoring_transactions.sql
+│   ├── transaction_monitoring_alerts.sql
+│   ├── transaction_monitoring_alert_transactions.sql
+│   └── transaction_monitoring_alert_status_history.sql
 ├── README.md                         # This file
 ├── FLOW.md                           # Deep-dive: schema, engine, endpoints, end-to-end scenario
 ├── transaction_monitoring.md         # Original training brief / requirements
@@ -280,69 +286,59 @@ Frontend ready at **http://localhost:5173** (Vite proxies `/api/*` to :8080).
 
 ---
 
-## Seed Demo Data (1000 Transactions)
+## Seed Demo Data
 
-A standalone seeder (`DataSeeder.java`) inserts **1000 realistic transactions** spread over the last 90 days and automatically evaluates all 4 monitoring rules, creating alerts with full status history.
+The `database/` folder contains ready-made MySQL dump files with 1000 transactions and all related alerts, rules, and history. Import them once after the app has started for the first time.
 
-### What gets seeded
+### What's included
 
-| Segment | Count | Purpose |
+| File | Table | Contents |
 |---|---|---|
-| Random activity ($50–$9,500) | 870 | Normal traffic across 10 accounts, 60 payees |
-| Large transactions ($11k–$90k) | 30 | Guaranteed `AMOUNT_THRESHOLD` alerts |
-| New payee transactions | 20 | Guaranteed `NEW_PAYEE` alerts (PAYEE061-PAYEE080) |
-| Velocity bursts (5 accts × 10 txns in 9 min) | 50 | Guaranteed `VELOCITY` alerts |
-| High-value days (3 accts × 10 txns/day ~$70k) | 30 | Guaranteed `DAILY_LIMIT` alerts |
+| `transaction_monitoring_monitoring_rules.sql` | `monitoring_rules` | 4 default active rules |
+| `transaction_monitoring_transactions.sql` | `transactions` | 1000 transactions (90 days, 10 accounts, 80 payees) |
+| `transaction_monitoring_alerts.sql` | `alerts` | All alerts fired by the rule engine |
+| `transaction_monitoring_alert_transactions.sql` | `alert_transactions` | Alert ↔ transaction links |
+| `transaction_monitoring_alert_status_history.sql` | `alert_status_history` | Full status audit trail per alert |
 
-All 5 tables are populated: `transactions`, `alerts`, `alert_transactions`, `alert_status_history`, plus references to the existing `monitoring_rules`.
+### How to import
 
-Alert statuses reflect realistic age-based progression:
-- **< 7 days old** → `OPEN`
-- **7–30 days old** → `ACKNOWLEDGED`
-- **30–60 days old** → `CLOSED` or `DISMISSED`
-- **> 60 days old** → fully `CLOSED` with complete OPEN → ACKNOWLEDGED → INVESTIGATING → CLOSED history
-
-### How to run
-
-**Step 1** — Start the Spring Boot app at least once so `data.sql` seeds the monitoring rules:
+**Step 1** — Start the Spring Boot app once so `schema.sql` creates all tables, then stop it:
 ```bash
 cd backend
 
 # Windows
 .\mvnw.cmd spring-boot:run
-
-# macOS / Linux
-./mvnw spring-boot:run
+# (wait for "Started TransactionMonitoringApplication", then Ctrl+C)
 ```
 
-**Step 2** — Stop the app, then run the seeder:
+**Step 2** — Import the dump files **in order** (FK dependencies matter):
+
+**Option A — MySQL command line:**
 ```bash
-# Windows
+mysql -u root -p transaction_monitoring < database/transaction_monitoring_monitoring_rules.sql
+mysql -u root -p transaction_monitoring < database/transaction_monitoring_transactions.sql
+mysql -u root -p transaction_monitoring < database/transaction_monitoring_alerts.sql
+mysql -u root -p transaction_monitoring < database/transaction_monitoring_alert_transactions.sql
+mysql -u root -p transaction_monitoring < database/transaction_monitoring_alert_status_history.sql
+```
+
+**Option B — MySQL Workbench:**
+1. **Server → Data Import**
+2. Select **"Import from Self-Contained File"**
+3. Import each file above in the same order
+4. Click **Start Import** for each
+
+**Step 3** — Start the app again. The dashboard will show populated data immediately.
+
+> **Note:** Import only once per clean database. Running it again will duplicate data. To reset, drop and recreate the database or truncate all tables first.
+
+### Alternative: Generate data programmatically
+
+If you prefer to generate fresh data instead of using the dump files, `DataSeeder.java` is also included:
+```bash
+cd backend
 .\mvnw.cmd compile exec:java
-
-# macOS / Linux
-./mvnw compile exec:java
 ```
-
-Expected output:
-```
-======================================
-   Transaction Monitoring Data Seeder
-======================================
-Rules loaded: {AMOUNT_THRESHOLD=1, VELOCITY=2, NEW_PAYEE=3, DAILY_LIMIT=4}
-Inserted 1000 transactions
-
-============ Seeding Complete ============
-Transactions     : 1000
-Total Alerts     : ~75
-  AMOUNT_THRESHOLD : ~30
-  VELOCITY         : 5
-  NEW_PAYEE        : 20
-  DAILY_LIMIT      : ~3
-==========================================
-```
-
-> The seeder uses a fixed random seed (`42`) so results are reproducible. Run it only once per clean database — running it again will add a second batch of 1000 transactions and duplicate alerts.
 
 ---
 
@@ -509,6 +505,7 @@ Current tests: a single Spring context-load test at `backend/src/test/java/.../T
 | `npm install` errors | Old Node/npm | Use Node 18+ |
 | Alerts not created | All rules deactivated | Check Rules page toggles / `active` column |
 | `409` on alert action | Invalid lifecycle transition | Follow OPEN→ACKNOWLEDGED→INVESTIGATING→CLOSED |
+| SQL import FK error | Wrong import order | Import in order: rules → transactions → alerts → alert_transactions → alert_status_history |
 
 ---
 
