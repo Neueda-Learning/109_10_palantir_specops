@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS monitoring_rules (
     id                   BIGINT AUTO_INCREMENT PRIMARY KEY,
     name                 VARCHAR(100)   NOT NULL,
     description          VARCHAR(255),
-    type                 ENUM('AMOUNT_THRESHOLD','VELOCITY','NEW_PAYEE','DAILY_LIMIT') NOT NULL,
+    type                 ENUM('AMOUNT_THRESHOLD','VELOCITY','NEW_PAYEE','DAILY_LIMIT','FLAGGED_PAYEE','FLAGGED_PAYEE_CONCENTRATION') NOT NULL,
     severity             ENUM('HIGH','MEDIUM','LOW') NOT NULL DEFAULT 'MEDIUM',
     active               BOOLEAN        NOT NULL DEFAULT TRUE,
     threshold_amount     DECIMAL(15,2),
@@ -26,6 +26,11 @@ CREATE TABLE IF NOT EXISTS monitoring_rules (
     created_at           DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at           DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
+
+-- Upgrades an existing DB so the type enum accepts the two new flagged-organisation rule types.
+-- Safe to re-run: MODIFY with the same definition is idempotent.
+ALTER TABLE monitoring_rules
+    MODIFY COLUMN type ENUM('AMOUNT_THRESHOLD','VELOCITY','NEW_PAYEE','DAILY_LIMIT','FLAGGED_PAYEE','FLAGGED_PAYEE_CONCENTRATION') NOT NULL;
 
 CREATE TABLE IF NOT EXISTS alerts (
     id                BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -57,4 +62,15 @@ CREATE TABLE IF NOT EXISTS alert_status_history (
     notes            TEXT,
     changed_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (alert_id) REFERENCES alerts(id)
+);
+
+CREATE TABLE IF NOT EXISTS flagged_entities (
+    id           BIGINT AUTO_INCREMENT PRIMARY KEY,
+    entity_name  VARCHAR(120)   NOT NULL,
+    payee_id     VARCHAR(50)    NOT NULL,
+    reason       VARCHAR(255),
+    risk_level   ENUM('HIGH','MEDIUM','LOW') NOT NULL DEFAULT 'MEDIUM',
+    active       BOOLEAN        NOT NULL DEFAULT TRUE,
+    created_at   DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_flagged_payee (payee_id)
 );

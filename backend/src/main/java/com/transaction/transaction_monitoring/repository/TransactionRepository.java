@@ -118,6 +118,22 @@ public class TransactionRepository {
         return count != null ? count : 0;
     }
 
+    public BigDecimal sumFlaggedPayeeDebits(String accountId, LocalDateTime from) {
+        String sql = """
+                SELECT COALESCE(SUM(t.amount), 0) FROM transactions t
+                JOIN flagged_entities f ON t.payee_id = f.payee_id
+                WHERE t.account_id = ? AND f.active = TRUE AND t.type = 'DEBIT' AND t.timestamp >= ?
+                """;
+        BigDecimal sum = jdbc.queryForObject(sql, BigDecimal.class, accountId, Timestamp.valueOf(from));
+        return sum != null ? sum : BigDecimal.ZERO;
+    }
+
+    public BigDecimal sumDebitsInWindow(String accountId, LocalDateTime from) {
+        String sql = "SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE account_id = ? AND type = 'DEBIT' AND timestamp >= ?";
+        BigDecimal sum = jdbc.queryForObject(sql, BigDecimal.class, accountId, Timestamp.valueOf(from));
+        return sum != null ? sum : BigDecimal.ZERO;
+    }
+
     public List<Transaction> findByIds(List<Long> ids) {
         if (ids == null || ids.isEmpty()) return List.of();
         String placeholders = String.join(",", ids.stream().map(id -> "?").toList());

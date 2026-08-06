@@ -13,3 +13,15 @@ WHERE NOT EXISTS (SELECT 1 FROM monitoring_rules WHERE type = 'NEW_PAYEE' LIMIT 
 INSERT INTO monitoring_rules (name, description, type, severity, active, threshold_amount, transaction_count, time_window_minutes, daily_limit)
 SELECT 'Daily Limit Exceeded', 'Alert when cumulative daily transaction amount exceeds $50,000', 'DAILY_LIMIT', 'HIGH', TRUE, NULL, NULL, NULL, 50000.00
 WHERE NOT EXISTS (SELECT 1 FROM monitoring_rules WHERE type = 'DAILY_LIMIT' LIMIT 1);
+
+INSERT INTO monitoring_rules (name, description, type, severity, active, threshold_amount, transaction_count, time_window_minutes, daily_limit)
+SELECT 'Flagged Organisation Contact', 'Alert when any transaction is sent to an organisation on the flagged watchlist', 'FLAGGED_PAYEE', 'MEDIUM', TRUE, NULL, NULL, NULL, NULL
+WHERE NOT EXISTS (SELECT 1 FROM monitoring_rules WHERE type = 'FLAGGED_PAYEE' LIMIT 1);
+
+INSERT INTO monitoring_rules (name, description, type, severity, active, threshold_amount, transaction_count, time_window_minutes, daily_limit)
+SELECT 'Flagged Organisation Concentration', 'Alert when DEBIT spending to flagged organisations exceeds 80% of an account total within 30 days', 'FLAGGED_PAYEE_CONCENTRATION', 'HIGH', TRUE, 80.00, NULL, 43200, NULL
+WHERE NOT EXISTS (SELECT 1 FROM monitoring_rules WHERE type = 'FLAGGED_PAYEE_CONCENTRATION' LIMIT 1);
+
+INSERT INTO flagged_entities (entity_name, payee_id, reason, risk_level, active)
+SELECT 'Global Charity X', 'ORG-12345', 'Known anti-social organisation', 'HIGH', TRUE
+WHERE NOT EXISTS (SELECT 1 FROM flagged_entities WHERE payee_id = 'ORG-12345' LIMIT 1);

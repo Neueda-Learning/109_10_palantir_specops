@@ -92,7 +92,7 @@ public class TransactionService {
 
     public List<TransactionResponse> generate(int count) {
         String[] accounts = {"ACC-001", "ACC-002", "ACC-003", "ACC-004", "ACC-005"};
-        String[] payees = {"PAYEE-A", "PAYEE-B", "PAYEE-C", "PAYEE-D", "PAYEE-E", "PAYEE-NEW-1", "PAYEE-NEW-2"};
+        String[] payees = {"PAYEE-A", "PAYEE-B", "PAYEE-C", "PAYEE-D", "PAYEE-E", "PAYEE-NEW-1", "PAYEE-NEW-2", "ORG-12345"};
         Random rnd = new Random();
         List<TransactionResponse> results = new ArrayList<>();
 

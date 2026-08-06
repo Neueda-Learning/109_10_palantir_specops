@@ -22,13 +22,17 @@ public class RuleEngineService {
                              AmountThresholdRuleEvaluator amountEvaluator,
                              VelocityRuleEvaluator velocityEvaluator,
                              NewPayeeRuleEvaluator newPayeeEvaluator,
-                             DailyLimitRuleEvaluator dailyLimitEvaluator) {
+                             DailyLimitRuleEvaluator dailyLimitEvaluator,
+                             FlaggedPayeeRuleEvaluator flaggedPayeeEvaluator,
+                             FlaggedPayeeConcentrationRuleEvaluator flaggedConcentrationEvaluator) {
         this.ruleRepository = ruleRepository;
         this.evaluators = new EnumMap<>(RuleType.class);
         evaluators.put(RuleType.AMOUNT_THRESHOLD, amountEvaluator);
         evaluators.put(RuleType.VELOCITY, velocityEvaluator);
         evaluators.put(RuleType.NEW_PAYEE, newPayeeEvaluator);
         evaluators.put(RuleType.DAILY_LIMIT, dailyLimitEvaluator);
+        evaluators.put(RuleType.FLAGGED_PAYEE, flaggedPayeeEvaluator);
+        evaluators.put(RuleType.FLAGGED_PAYEE_CONCENTRATION, flaggedConcentrationEvaluator);
     }
 
     public List<AlertCandidate> evaluate(Transaction transaction) {
