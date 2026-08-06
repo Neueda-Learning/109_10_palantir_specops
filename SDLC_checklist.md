@@ -208,7 +208,7 @@
 
 ## 9) Testing Strategy
 
-> Current state: only a Spring context-load test exists (backend/src/test/.../TransactionMonitoringApplicationTests.java). Coverage expansion is a priority.
+> Current state: backend unit tests now cover rule evaluators, TransactionService de-dup/linking, AlertService lifecycle transitions, and GlobalExceptionHandler contracts (see testing_report.md for execution evidence).
 
 | Test | Owner | Status |
 |------|-------|--------|
