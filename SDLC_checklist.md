@@ -208,22 +208,23 @@
 
 ## 9) Testing Strategy
 
-> Current state: only a Spring context-load test exists (`backend/src/test/.../TransactionMonitoringApplicationTests.java`). Coverage expansion is a priority.
+> Current state: backend unit tests now cover rule evaluators, TransactionService de-dup/linking, AlertService lifecycle transitions, and GlobalExceptionHandler contracts (see testing_report.md for execution evidence).
 
 | Test | Owner | Status |
 |------|-------|--------|
-| Unit: each rule type fires correctly (amount/velocity/new-payee/daily-limit) | Avinash | ⏳ planned |
-| Unit: de-dup suppresses second OPEN alert for same (rule, account) | Dhanush | ⏳ planned |
-| Unit: alert state transitions + illegal-transition rejection (409) | Dhanush | ⏳ planned |
-| Integration: transaction → rule eval → alert → history rows | Dhanush | ⏳ planned |
-| Integration: alert detail bundles linked transactions + history | Avinash | ⏳ planned |
-| Negative: bad payloads (400), missing resource (404), invalid state change (409) | Rakesh | ⏳ planned |
-| Performance: 1 000 transactions, measure rule-eval time | Rakesh | ⏳ planned |
-| UAT: full analyst scenario end-to-end | All | ⏳ planned |
-| **Flagged-org (in scope):** FLAGGED_PAYEE fires on watchlist match; concentration rule fires above threshold; unflagging stops new alerts while history is untouched | Avinash + Dhanush | ⏳ planned |
+| Unit: each rule type fires correctly (amount/velocity/new-payee/daily-limit) | Avinash | planned |
+| Unit: de-dup suppresses second OPEN alert for same (rule, account) | Dhanush | planned |
+| Unit: alert state transitions + illegal-transition rejection (409) | Dhanush | planned |
+| Integration: transaction -> rule eval -> alert -> history rows | Dhanush | planned |
+| Integration: alert detail bundles linked transactions + history | Avinash | planned |
+| Negative: bad payloads (400), missing resource (404), invalid state change (409) | Rakesh | planned |
+| Performance: 1 000 transactions, measure rule-eval time | Rakesh | planned |
+| UAT: full analyst scenario end-to-end | All | planned |
+| Flagged-org (in scope): FLAGGED_PAYEE fires on watchlist match; concentration rule fires above threshold; unflagging stops new alerts while history is untouched | Avinash + Dhanush | planned |
+
+Detailed execution logs and evidence are captured in testing_report.md.
 
 ---
-
 ## 10) CI/CD & Quality Gates
 
 - [x] Backend build via Maven wrapper (`mvnw.cmd test`) `[Avinash — Day 1]`
@@ -440,3 +441,5 @@ flagged_entities (in scope) ──(payee_id match)──► FLAGGED_PAYEE / FLAG
 - [x] Demo is stable, data is seeded, presentation is ready
 - [ ] **Flagged organisation feature (in scope) delivered, tested, and demonstrated**
 - [ ] Test coverage expanded beyond the context-load test
+
+
