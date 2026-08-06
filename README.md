@@ -91,13 +91,14 @@ monitoring-master/
 │   │   │   │   ├── model/            # Plain data classes (Transaction, MonitoringRule, Alert, ...)
 │   │   │   │   ├── dto/              # Request/response objects
 │   │   │   │   ├── enums/            # AlertStatus, RuleType, Severity, TransactionType/Status
-│   │   │   │   └── exception/        # Custom exceptions + global error handler
+│   │   │   │   ├── exception/        # Custom exceptions + global error handler
+│   │   │   │   └── DataSeeder.java   # Standalone JDBC seeder — inserts 1000 demo transactions + alerts
 │   │   │   └── resources/
 │   │   │       ├── schema.sql        # Creates the 5 DB tables
 │   │   │       ├── data.sql          # Seeds 4 default monitoring rules
 │   │   │       └── application.properties  # DB connection + server + Swagger config
 │   │   └── test/                     # Spring context-load test
-│   ├── pom.xml                       # Maven build & dependencies
+│   ├── pom.xml                       # Maven build & dependencies (includes exec-maven-plugin)
 │   └── mvnw.cmd / mvnw               # Maven wrapper
 ├── frontend/                         # React + Vite SPA
 │   ├── src/
@@ -279,6 +280,72 @@ Frontend ready at **http://localhost:5173** (Vite proxies `/api/*` to :8080).
 
 ---
 
+## Seed Demo Data (1000 Transactions)
+
+A standalone seeder (`DataSeeder.java`) inserts **1000 realistic transactions** spread over the last 90 days and automatically evaluates all 4 monitoring rules, creating alerts with full status history.
+
+### What gets seeded
+
+| Segment | Count | Purpose |
+|---|---|---|
+| Random activity ($50–$9,500) | 870 | Normal traffic across 10 accounts, 60 payees |
+| Large transactions ($11k–$90k) | 30 | Guaranteed `AMOUNT_THRESHOLD` alerts |
+| New payee transactions | 20 | Guaranteed `NEW_PAYEE` alerts (PAYEE061-PAYEE080) |
+| Velocity bursts (5 accts × 10 txns in 9 min) | 50 | Guaranteed `VELOCITY` alerts |
+| High-value days (3 accts × 10 txns/day ~$70k) | 30 | Guaranteed `DAILY_LIMIT` alerts |
+
+All 5 tables are populated: `transactions`, `alerts`, `alert_transactions`, `alert_status_history`, plus references to the existing `monitoring_rules`.
+
+Alert statuses reflect realistic age-based progression:
+- **< 7 days old** → `OPEN`
+- **7–30 days old** → `ACKNOWLEDGED`
+- **30–60 days old** → `CLOSED` or `DISMISSED`
+- **> 60 days old** → fully `CLOSED` with complete OPEN → ACKNOWLEDGED → INVESTIGATING → CLOSED history
+
+### How to run
+
+**Step 1** — Start the Spring Boot app at least once so `data.sql` seeds the monitoring rules:
+```bash
+cd backend
+
+# Windows
+.\mvnw.cmd spring-boot:run
+
+# macOS / Linux
+./mvnw spring-boot:run
+```
+
+**Step 2** — Stop the app, then run the seeder:
+```bash
+# Windows
+.\mvnw.cmd compile exec:java
+
+# macOS / Linux
+./mvnw compile exec:java
+```
+
+Expected output:
+```
+======================================
+   Transaction Monitoring Data Seeder
+======================================
+Rules loaded: {AMOUNT_THRESHOLD=1, VELOCITY=2, NEW_PAYEE=3, DAILY_LIMIT=4}
+Inserted 1000 transactions
+
+============ Seeding Complete ============
+Transactions     : 1000
+Total Alerts     : ~75
+  AMOUNT_THRESHOLD : ~30
+  VELOCITY         : 5
+  NEW_PAYEE        : 20
+  DAILY_LIMIT      : ~3
+==========================================
+```
+
+> The seeder uses a fixed random seed (`42`) so results are reproducible. Run it only once per clean database — running it again will add a second batch of 1000 transactions and duplicate alerts.
+
+---
+
 ## Sample Usage (API)
 
 ```bash
@@ -390,7 +457,7 @@ alert_transactions (join table)
 |---|---|
 | `backend/src/main/resources/application.properties` | DB URL/username/password, auto schema+data init, server port (8080), Swagger paths |
 | `frontend/vite.config.js` | Dev server port (5173) + `/api` proxy target (:8080) |
-| `backend/pom.xml` | Java version, Spring Boot, MySQL driver, springdoc, validation |
+| `backend/pom.xml` | Java version, Spring Boot, MySQL driver, springdoc, validation, exec-maven-plugin (for DataSeeder) |
 | `frontend/package.json` | React, Vite, Tailwind, Router, Axios, Recharts; scripts: `dev`, `build`, `lint`, `preview` |
 
 ---
@@ -404,6 +471,9 @@ cd backend
 
 # Backend: package (skip tests)
 .\mvnw.cmd clean package -DskipTests
+
+# Seed database with 1000 demo transactions (run after first app start)
+.\mvnw.cmd compile exec:java
 
 # Frontend: lint
 cd frontend
